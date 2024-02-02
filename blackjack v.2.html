@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blackjack Game</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            color: #3498db;
+        }
+
+        button {
+            background-color: #3498db;
+            color: #ecf0f1;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            margin: 5px;
+            border-radius: 5px;
+        }
+
+        #result {
+            font-size: 1.5em;
+            margin-top: 10px;
+            color: #e74c3c;
+        }
+
+        #cards {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .card {
+            width: 80px;
+            height: 120px;
+            margin: 0 20px;
+            border: 2px solid #3498db;
+            border-radius: 10px;
+            text-align: center;
+            line-height: 120px;
+            font-size: 2em;
+            background-color: #2ecc71;
+            color: #ecf0f1;
+        }
+
+        .separator {
+            border-top: 2px solid #3498db;
+            margin: 20px;
+            width: 100%;
+        }
+
+        #buttons-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        #action-buttons {
+            display: flex;
+            margin-top: 10px;
+        }
+        
+        #action-buttons button {
+            margin: 0 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Blackjack Game</h1>
+    
+    <div id="buttons-container">
+        <button id="startGameBtn" onclick="startGame()">Start Game</button>
+        <button id="playAgainBtn" onclick="playAgain()" style="display: none;">Play Again</button>
+
+        <div id="action-buttons" style="display: none;">
+            <button id="hitBtn" onclick="hit()">Hit</button>
+            <button id="standBtn" onclick="stand()">Stand</button>
+        </div>
+    </div>
+
+    <div id="result"></div>
+    <div id="cards"></div>
+
+    <script>
+        const suits = ['♥', '♦', '♣', '♠'];
+        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+
+        let deck = [];
+        let playerCards = [];
+        let dealerCards = [];
+        let isGameActive = false;
+
+        function startGame() {
+            if (!isGameActive) {
+                isGameActive = true;
+                deck = createDeck();
+                shuffleDeck(deck);
+                playerCards = [drawCard(), drawCard()];
+                dealerCards = [drawCard(), drawCard()];
+
+                displayCards();
+                checkForBlackjack();
+
+                // Show/hide buttons
+                document.getElementById('playAgainBtn').style.display = 'none';
+                document.getElementById('hitBtn').style.display = 'block';
+                document.getElementById('standBtn').style.display = 'block';
+                document.getElementById('action-buttons').style.display = 'flex';
+                document.getElementById('startGameBtn').style.display = 'none';
+            }
+        }
+
+        function createDeck() {
+            return suits.flatMap(suit => values.map(value => ({ suit, value })));
+        }
+
+        function shuffleDeck(deck) {
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+        }
+
+        function drawCard() {
+            return deck.pop();
+        }
+
+        function displayCards() {
+            const playerCardsHtml = playerCards.map(card => createCardHtml(card)).join('');
+            const dealerCardsHtml = dealerCards.map(card => createCardHtml(card)).join('');
+
+            const separator = '<div class="separator"></div>';
+
+            document.getElementById('cards').innerHTML = `
+                <div id="dealer-cards">
+                    <div>Dealer's Cards</div>
+                    ${dealerCardsHtml}
+                </div>
+                ${separator}
+                <div id="player-cards">
+                    <div>Your Cards</div>
+                    ${playerCardsHtml}
+                </div>
+            `;
+        }
+
+        function createCardHtml(card) {
+            return `<div class="card">${card.value} ${card.suit}</div>`;
+        }
+
+        function checkForBlackjack() {
+            if (calculateHandValue(playerCards) === 21) {
+                endGame('Player wins with Blackjack!');
+            } else if (calculateHandValue(dealerCards) === 21) {
+                endGame('Dealer wins with Blackjack!');
+            }
+        }
+
+        function calculateHandValue(cards) {
+            let sum = 0;
+            let hasAce = false;
+
+            for (const card of cards) {
+                if (card.value === 'A') {
+                    hasAce = true;
+                }
+                sum += getValue(card.value);
+            }
+
+            if (hasAce && sum + 10 <= 21) {
+                sum += 10;
+            }
+
+            return sum;
+        }
+
+        function getValue(cardValue) {
+            if (cardValue === 'K' || cardValue === 'Q' || cardValue === 'J') {
+                return 10;
+            } else if (cardValue === 'A') {
+                return 1;
+            } else {
+                return parseInt(cardValue);
+            }
+        }
+
+        function hit() {
+            if (isGameActive) {
+                playerCards.push(drawCard());
+                displayCards();
+
+                if (calculateHandValue(playerCards) > 21) {
+                    endGame('Player busts! Dealer wins.');
+                }
+            }
+        }
+
+        function stand() {
+            if (isGameActive) {
+                while (calculateHandValue(dealerCards) < 17) {
+                    dealerCards.push(drawCard());
+                }
+
+                displayCards();
+
+                if (calculateHandValue(dealerCards) > 21 || calculateHandValue(playerCards) > calculateHandValue(dealerCards)) {
+                    endGame('Player wins!');
+                } else if (calculateHandValue(playerCards) < calculateHandValue(dealerCards)) {
+                    endGame('Dealer wins!');
+                } else {
+                    endGame('It\'s a tie!');
+                }
+            }
+        }
+
+        function endGame(message) {
+            isGameActive = false;
+            document.getElementById('result').innerText = message;
+
+            // Show/hide buttons
+            document.getElementById('playAgainBtn').style.display = 'block';
+            document.getElementById('hitBtn').style.display = 'none';
+            document.getElementById('standBtn').style.display = 'none';
+            document.getElementById('action-buttons').style.display = 'none';
+        }
+
+        function playAgain() {
+            // Reset the game state
+            isGameActive = false;
+            deck = [];
+            playerCards = [];
+            dealerCards = [];
+            
+            // Clear messages and cards
+            document.getElementById('result').innerText = '';
+            document.getElementById('cards').innerHTML = '';
+
+            // Show/hide buttons
+            document.getElementById('playAgainBtn').style.display = 'none';
+            document.getElementById('startGameBtn').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
+
+
+
+
